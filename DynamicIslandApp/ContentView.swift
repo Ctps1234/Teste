@@ -13,6 +13,7 @@ struct ContentView: View {
                 VStack(spacing: 24) {
                     header
                     activitiesSection
+                    notificationsSection
                     infoSection
                 }
                 .padding(20)
@@ -92,12 +93,91 @@ struct ContentView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Notificações
+
+    private var notificationsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Notificações")
+                .font(.headline)
+
+            notificationButton(
+                icon: "bell.badge.fill", color: .orange,
+                title: "Notificação de teste",
+                subtitle: "Dispara em 3 segundos (real)"
+            ) {
+                manager.scheduleTestNotification()
+            }
+
+            notificationButton(
+                icon: "message.fill", color: .green,
+                title: "Simular mensagem",
+                subtitle: "WhatsApp na ilha"
+            ) {
+                manager.showNotification(IslandNotification(
+                    appName: "WhatsApp",
+                    title: "Maria Silva",
+                    body: "Oi! Viu a ilha nova? 😍",
+                    color: .green,
+                    icon: "message.fill"
+                ))
+            }
+
+            notificationButton(
+                icon: "checklist", color: .yellow,
+                title: "Simular lembrete",
+                subtitle: "Lembretes na ilha"
+            ) {
+                manager.showNotification(IslandNotification(
+                    appName: "Lembretes",
+                    title: "Beber água",
+                    body: "Hora de se hidratar 💧",
+                    color: .yellow,
+                    icon: "checklist"
+                ))
+            }
+        }
+    }
+
+    private func notificationButton(
+        icon: String, color: Color, title: String, subtitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(color)
+                    .frame(width: 38, height: 38)
+                    .background(color.opacity(0.15))
+                    .cornerRadius(10)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+                    .font(.subheadline)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.gray.opacity(0.08))
+            .cornerRadius(16)
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Informações
 
     private var infoSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("A música mostra o que está tocando de verdade (Apple Music, Spotify...)", systemImage: "info.circle")
             Label("A bateria reflete o carregamento real do iPhone", systemImage: "battery.75")
+            Label("Notificações locais reais aparecem na ilha quando chegam", systemImage: "bell.fill")
             Label("A ilha fica por cima de qualquer app — toque nela para interagir", systemImage: "hand.tap")
         }
         .font(.subheadline)

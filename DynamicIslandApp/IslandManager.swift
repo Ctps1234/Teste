@@ -8,6 +8,8 @@ import Foundation
 import UIKit
 import MediaPlayer
 import Combine
+import UserNotifications
+import SwiftUI
 
 enum IslandActivity: Equatable {
     case idle
@@ -17,6 +19,7 @@ enum IslandActivity: Equatable {
     case faceID
     case airpods
     case call
+    case notification
 }
 
 struct NowPlayingInfo {
@@ -25,6 +28,17 @@ struct NowPlayingInfo {
     var isPlaying: Bool = false
     var elapsed: Double = 0
     var duration: Double = 0
+}
+
+// Uma notificação exibida na ilha (mensagem, lembrete, alerta...)
+struct IslandNotification: Identifiable {
+    let id = UUID()
+    var appName: String
+    var title: String
+    var body: String
+    var date: Date = Date()
+    var color: Color
+    var icon: String
 }
 
 class IslandManager: ObservableObject {
@@ -38,15 +52,19 @@ class IslandManager: ObservableObject {
     @Published var timerTotal: TimeInterval = 300
     @Published var callSeconds: Int = 0
     @Published var inCall: Bool = false
+    @Published var currentNotification: IslandNotification?
 
     private var timerCancellable: AnyCancellable?
     private var nowPlayingCancellable: AnyCancellable?
     private var callTimer: Timer?
     private var faceIDTimer: Timer?
+    private var notificationTimer: Timer?
+    private var notificationQueue: [IslandNotification] = []
 
     private init() {
         setupNowPlaying()
         setupBattery()
+        setupNotifications()
     }
 
     // MARK: - Música (informações reais do que está tocando)
@@ -159,7 +177,85 @@ class IslandManager: ObservableObject {
         timerCancellable?.cancel()
         callTimer?.invalidate()
         faceIDTimer?.invalidate()
+        notificationTimer?.invalidate()
         callTimer = nil
         faceIDTimer = nil
+        notificationTimer = nil
+        currentNotification = nil
+        notificationQueue.removeAll()
+    }
+
+    // MARK: - Notificações
+
+    private func setupNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        // Pede permissão para notificações locais
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    }
+
+    /// Agenda uma notificação local REAL que dispara em 3 segundos.
+    /// Quando ela chega com o app aberto, aparece na ilha.
+    func scheduleTestNotification() {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = "Dynamic Island"
+        content.body = "Sua notificação de teste chegou! 🎉"
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "teste-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        center.add(request)
+    }
+
+    /// Exibe uma notificação na ilha (fila, uma por vez, some em 5s)
+    func showNotification(_ notification: IslandNotification) {
+        notificationQueue.append(notification)
+        if currentNotification == nil {
+            showNextNotification()
+        }
+    }
+
+    func dismissNotification() {
+        notificationTimer?.invalidate()
+        showNextNotification()
+    }
+
+    private func showNextNotification() {
+        guard !notificationQueue.isEmpty else {
+            currentNotification = nil
+            if activity == .notification { activity = .idle }
+            return
+        }
+        currentNotification = notificationQueue.removeFirst()
+        activity = .notification
+        notificationTimer?.invalidate()
+        notificationTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { [weak self] _ in
+            self?.showNextNotification()
+        }
+    }
+}
+
+// MARK: - Delegate das notificações (app em primeiro plano)
+
+extension IslandManager: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        let content = notification.request.content
+        showNotification(IslandNotification(
+            appName: "Notificações",
+            title: content.title.isEmpty ? "Notificação" : content.title,
+            body: content.body,
+            color: .orange,
+            icon: "bell.fill"
+        ))
+        // Também mostra o banner do sistema
+        completionHandler([.banner, .sound])
     }
 }

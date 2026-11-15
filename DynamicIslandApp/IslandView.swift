@@ -61,6 +61,7 @@ struct ExpandedContent: View {
             case .faceID: FaceIDActivityView()
             case .airpods: AirPodsActivityView()
             case .call: CallActivityView()
+            case .notification: NotificationActivityView()
             case .idle: EmptyView()
             }
         }
@@ -317,5 +318,48 @@ struct CallActivityView: View {
 
     private func formatTime(_ seconds: Int) -> String {
         return "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
+    }
+}
+
+// MARK: - Notificação
+
+struct NotificationActivityView: View {
+    @EnvironmentObject var manager: IslandManager
+
+    var body: some View {
+        if let notification = manager.currentNotification {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(notification.color)
+                    .frame(width: 42, height: 42)
+                    .overlay(
+                        Image(systemName: notification.icon)
+                            .foregroundColor(.white)
+                            .font(.title3)
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(notification.appName.uppercased())
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.gray)
+                        Spacer()
+                        Text("agora")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                    }
+                    Text(notification.title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    Text(notification.body)
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.85))
+                        .lineLimit(2)
+                }
+            }
+            .contentShape(Rectangle)
+            .onTapGesture { manager.dismissNotification() }
+        }
     }
 }
