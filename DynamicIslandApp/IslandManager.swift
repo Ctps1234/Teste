@@ -40,6 +40,7 @@ class IslandManager: ObservableObject {
     @Published var inCall: Bool = false
 
     private var timerCancellable: AnyCancellable?
+    private var nowPlayingCancellable: AnyCancellable?
     private var callTimer: Timer?
     private var faceIDTimer: Timer?
 
@@ -129,13 +130,16 @@ class IslandManager: ObservableObject {
     }
 
     func togglePlayPause() {
-        // Envia play/pause de verdade para o app de música
-        if nowPlaying.isPlaying {
-            MPRemoteCommandCenter.shared().pauseCommand.sendCommandToSystem()
-        } else {
-            MPRemoteCommandCenter.shared().playCommand.sendCommandToSystem()
-        }
-        refreshNowPlaying()
+        // Observação: não existe API pública para controlar a música do
+        // sistema (play/pause de outro app). O botão alterna o estado
+        // local só para a animação da ilha; o polling de 1s sincroniza
+        // com o que está tocando de verdade.
+        nowPlaying.isPlaying.toggle()
+    }
+
+    func skipTrack() {
+        // Sem API pública para pular faixa — reinicia o progresso local
+        nowPlaying.elapsed = 0
     }
 
     private func startTimerCountdown() {

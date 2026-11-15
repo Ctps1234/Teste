@@ -104,14 +104,14 @@ struct MusicActivityView: View {
                 .frame(height: 3.5)
 
             HStack(spacing: 28) {
-                Button { MPRemoteCommandCenter.shared().skipBackwardCommand.sendCommandToSystem() } label: {
+                Button { manager.skipTrack() } label: {
                     Image(systemName: "backward.fill").foregroundColor(.white).font(.title3)
                 }
                 Button { manager.togglePlayPause() } label: {
                     Image(systemName: manager.nowPlaying.isPlaying ? "pause.fill" : "play.fill")
                         .foregroundColor(.white).font(.title2)
                 }
-                Button { MPRemoteCommandCenter.shared().skipForwardCommand.sendCommandToSystem() } label: {
+                Button { manager.skipTrack() } label: {
                     Image(systemName: "forward.fill").foregroundColor(.white).font(.title3)
                 }
             }
