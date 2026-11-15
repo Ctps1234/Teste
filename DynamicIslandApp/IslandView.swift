@@ -170,7 +170,7 @@ struct TimerActivityView: View {
                 Circle().stroke(Color.white.opacity(0.15), lineWidth: 4).frame(width: 52, height: 52)
                 Circle()
                     .trim(from: 0, to: timerFraction)
-                    .stroke(Color.orange, lineWidth: 4, lineCap: .round)
+                    .stroke(Color.orange, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                     .frame(width: 52, height: 52)
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 1), value: manager.timerRemaining)
