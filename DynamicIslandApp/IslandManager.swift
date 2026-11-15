@@ -51,31 +51,23 @@ class IslandManager: ObservableObject {
     // MARK: - Música (informações reais do que está tocando)
 
     private func setupNowPlaying() {
-        let center = MPNowPlayingInfoCenter.default
-
-        // Atualiza quando a música muda ou o playback muda
-        NotificationCenter.default.addObserver(
-            forName: MPNowPlayingInfoCenter.nowPlayingInfoDidChangeNotification,
-            object: nil, queue: .main
-        ) { [weak self] _ in self?.refreshNowPlaying() }
-
-        NotificationCenter.default.addObserver(
-            forName: MPRemoteCommandCenter.playbackStateDidChangeNotification,
-            object: nil, queue: .main
-        ) { [weak self] _ in self?.refreshNowPlaying() }
-
+        // O MediaPlayer não expõe notificação confiável para mudanças do
+        // Now Playing, então consultamos a cada segundo (polling).
+        nowPlayingCancellable = Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in self?.refreshNowPlaying() }
         refreshNowPlaying()
     }
 
     private func refreshNowPlaying() {
-        guard let info = MPNowPlayingInfoCenter.default.nowPlayingInfo else { return }
+        guard let info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
         nowPlaying.title = info[MPMediaItemPropertyTitle] as? String ?? "Sem título"
         nowPlaying.artist = info[MPMediaItemPropertyArtist] as? String ?? ""
         nowPlaying.elapsed = info[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? Double ?? 0
         nowPlaying.duration = info[MPMediaItemPropertyPlaybackDuration] as? Double ?? 0
-        // isPlaying: tenta descobrir pelo estado do remote command
-        let state = MPRemoteCommandCenter.shared().playbackState
-        nowPlaying.isPlaying = (state == .playing)
+        // Playback rate: 1.0 = tocando, 0.0 = pausado
+        let rate = info[MPNowPlayingInfoPropertyPlaybackRate] as? Double ?? 0
+        nowPlaying.isPlaying = rate > 0
     }
 
     // MARK: - Bateria (carregamento real do iPhone)
