@@ -1,0 +1,169 @@
+// IslandManager.swift
+// Gerencia o estado da ilha: qual atividade está ativa, música tocando,
+// bateria carregando, timer, etc. Também escuta o sistema de verdade:
+// - Música: MPNowPlayingInfoCenter (Apple Music, Spotify, etc.)
+// - Bateria: UIDevice (notificações de carregamento)
+
+import Foundation
+import UIKit
+import MediaPlayer
+import Combine
+
+enum IslandActivity: Equatable {
+    case idle
+    case music
+    case timer
+    case charging
+    case faceID
+    case airpods
+    case call
+}
+
+struct NowPlayingInfo {
+    var title: String = "Nenhuma música"
+    var artist: String = ""
+    var isPlaying: Bool = false
+    var elapsed: Double = 0
+    var duration: Double = 0
+}
+
+class IslandManager: ObservableObject {
+    static let shared = IslandManager()
+
+    @Published var activity: IslandActivity = .idle
+    @Published var nowPlaying = NowPlayingInfo()
+    @Published var batteryLevel: Float = 0
+    @Published var isCharging: Bool = false
+    @Published var timerRemaining: TimeInterval = 300
+    @Published var timerTotal: TimeInterval = 300
+    @Published var callSeconds: Int = 0
+    @Published var inCall: Bool = false
+
+    private var timerCancellable: AnyCancellable?
+    private var callTimer: Timer?
+    private var faceIDTimer: Timer?
+
+    private init() {
+        setupNowPlaying()
+        setupBattery()
+    }
+
+    // MARK: - Música (informações reais do que está tocando)
+
+    private func setupNowPlaying() {
+        let center = MPNowPlayingInfoCenter.default
+
+        // Atualiza quando a música muda ou o playback muda
+        NotificationCenter.default.addObserver(
+            forName: MPNowPlayingInfoCenter.nowPlayingInfoDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshNowPlaying() }
+
+        NotificationCenter.default.addObserver(
+            forName: MPRemoteCommandCenter.playbackStateDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshNowPlaying() }
+
+        refreshNowPlaying()
+    }
+
+    private func refreshNowPlaying() {
+        guard let info = MPNowPlayingInfoCenter.default.nowPlayingInfo else { return }
+        nowPlaying.title = info[MPMediaItemPropertyTitle] as? String ?? "Sem título"
+        nowPlaying.artist = info[MPMediaItemPropertyArtist] as? String ?? ""
+        nowPlaying.elapsed = info[MPNowPlayingInfoPropertyElapsedPlaybackTime] as? Double ?? 0
+        nowPlaying.duration = info[MPMediaItemPropertyPlaybackDuration] as? Double ?? 0
+        // isPlaying: tenta descobrir pelo estado do remote command
+        let state = MPRemoteCommandCenter.shared().playbackState
+        nowPlaying.isPlaying = (state == .playing)
+    }
+
+    // MARK: - Bateria (carregamento real do iPhone)
+
+    private func setupBattery() {
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        refreshBattery()
+
+        NotificationCenter.default.addObserver(
+            forName: UIDevice.batteryStateDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshBattery() }
+
+        NotificationCenter.default.addObserver(
+            forName: UIDevice.batteryLevelDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshBattery() }
+    }
+
+    private func refreshBattery() {
+        batteryLevel = UIDevice.current.batteryLevel
+        isCharging = (UIDevice.current.batteryState == .charging || UIDevice.current.batteryState == .full)
+    }
+
+    // MARK: - Ações
+
+    func show(_ newActivity: IslandActivity) {
+        stopTimers()
+        activity = newActivity
+
+        switch newActivity {
+        case .timer:
+            timerRemaining = timerTotal
+            startTimerCountdown()
+        case .faceID:
+            // Face ID some sozinho depois de 2.4s
+            faceIDTimer = Timer.scheduledTimer(withTimeInterval: 2.4, repeats: false) { [weak self] _ in
+                if self?.activity == .faceID { self?.activity = .idle }
+            }
+        case .call:
+            inCall = false
+            callSeconds = 0
+        default:
+            break
+        }
+    }
+
+    func acceptCall() {
+        inCall = true
+        callSeconds = 0
+        callTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.callSeconds += 1
+        }
+    }
+
+    func endCall() {
+        stopTimers()
+        activity = .idle
+    }
+
+    func togglePlayPause() {
+        // Envia play/pause de verdade para o app de música
+        if nowPlaying.isPlaying {
+            MPRemoteCommandCenter.shared().pauseCommand.sendCommandToSystem()
+        } else {
+            MPRemoteCommandCenter.shared().playCommand.sendCommandToSystem()
+        }
+        refreshNowPlaying()
+    }
+
+    private func startTimerCountdown() {
+        timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                if self.timerRemaining > 0 {
+                    self.timerRemaining -= 1
+                } else {
+                    self.timerRemaining = self.timerTotal // reinicia
+                }
+            }
+    }
+
+    private func stopTimers() {
+        timerCancellable?.cancel()
+        callTimer?.invalidate()
+        faceIDTimer?.invalidate()
+        callTimer = nil
+        faceIDTimer = nil
+    }
+}
