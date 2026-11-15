@@ -22,13 +22,21 @@ on:
 jobs:
   build:
     name: Build unsigned IPA
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select --switch /Applications/Xcode_15.4.app
+        run: |
+          if [ -d /Applications/Xcode.app ]; then
+            sudo xcode-select --switch /Applications/Xcode.app
+          else
+            LATEST=$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)
+            echo "Usando $LATEST"
+            sudo xcode-select --switch "$LATEST"
+          fi
+          xcodebuild -version
 
       - name: Build app (unsigned)
         run: |
