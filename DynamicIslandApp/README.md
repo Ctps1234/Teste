@@ -2,7 +2,7 @@
 
 Simulação da **Dynamic Island** para iPhones com notch (iPhone 11, XR, X, XS, etc.).
 
-> ⚠️ **Importante:** o iPhone 11 não tem a Dynamic Island de verdade — ela só existe no hardware do iPhone 14 Pro em diante. Este app **simula** a ilha com uma pílula preta flutuante sobre o notch, exatamente como os apps da App Store fazem. A pílula expande para mostrar atividades ao vivo: música, timer, bateria, Face ID, AirPods e ligação.
+> ⚠️ **Importante:** o iPhone 11 não tem a Dynamic Island de verdade — ela só existe no hardware do iPhone 14 Pro em diante. Este app **simula** a ilha com uma pílula preta flutuante sobre o notch, exatamente como os apps da App Store fazem. A pílula expande para mostrar atividades ao vivo: música, timer, bateria, Face ID, AirPods, ligação e notificações.
 
 ## O que o app faz
 
@@ -12,6 +12,7 @@ Simulação da **Dynamic Island** para iPhones com notch (iPhone 11, XR, X, XS, 
 - **Face ID** — animação de desbloqueio que some sozinha
 - **AirPods** — status de conexão
 - **Ligação** — simulação de chamada recebida, com atender/recusar
+- **Notificações** — fila de notificações na ilha (com auto-dismiss em 5s); aceita **notificações locais reais** do próprio app (`UNUserNotificationCenter`) e simulações prontas (WhatsApp, Lembretes). Toque na notificação para dispensar
 - A ilha fica **por cima de qualquer app** (janela com nível `.alert + 1`) e os toques passam por ela, exceto na própria pílula
 
 ## Arquivos
@@ -19,7 +20,7 @@ Simulação da **Dynamic Island** para iPhones com notch (iPhone 11, XR, X, XS, 
 | Arquivo | O que é |
 |---|---|
 | `DynamicIslandApp.swift` | Ponto de entrada + janela flutuante transparente (o "truque" da simulação) |
-| `IslandManager.swift` | Estado da ilha + integração com música real e bateria real |
+| `IslandManager.swift` | Estado da ilha + integração com música real, bateria real e notificações locais |
 | `IslandView.swift` | A pílula em SwiftUI: compacta e expandida, com todas as atividades |
 | `ContentView.swift` | Tela do app com os botões para testar cada atividade |
 | `DynamicIslandApp.xcodeproj/` | **Projeto Xcode completo** — é só abrir e compilar |
