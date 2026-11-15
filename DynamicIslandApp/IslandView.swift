@@ -358,7 +358,7 @@ struct NotificationActivityView: View {
                         .lineLimit(2)
                 }
             }
-            .contentShape(Rectangle)
+            .contentShape(Rectangle())
             .onTapGesture { manager.dismissNotification() }
         }
     }

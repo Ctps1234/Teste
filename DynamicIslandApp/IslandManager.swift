@@ -41,7 +41,7 @@ struct IslandNotification: Identifiable {
     var icon: String
 }
 
-class IslandManager: ObservableObject {
+class IslandManager: NSObject, ObservableObject {
     static let shared = IslandManager()
 
     @Published var activity: IslandActivity = .idle
@@ -61,7 +61,8 @@ class IslandManager: ObservableObject {
     private var notificationTimer: Timer?
     private var notificationQueue: [IslandNotification] = []
 
-    private init() {
+    private override init() {
+        super.init()
         setupNowPlaying()
         setupBattery()
         setupNotifications()
